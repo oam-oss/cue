@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"io/ioutil"
 	"math"
 	"math/big"
 	"math/bits"
@@ -150,6 +151,32 @@ func timeFormat(value, layout string) (bool, error) {
 var builtinPackages = map[string]*builtinPkg{
 	"": {
 		native: []*builtin{{}},
+	},
+	"unsafe": {
+		native: []*builtin{
+			{
+				Name:   "ReadFile",
+				Params: []kind{stringKind},
+				Result: stringKind,
+				Func: func(c *callCtxt) {
+					val := c.value(0)
+					if c.do() {
+						c.ret, c.err = func() (interface{}, error) {
+							path, err := val.String()
+							if err != nil {
+								return "", err
+							}
+
+							content, err := ioutil.ReadFile(path)
+							if err != nil {
+								return "", fmt.Errorf("failed read file: %v", err)
+							}
+							return string(content), nil
+						}()
+					}
+				},
+			},
+		},
 	},
 	"crypto/md5": {
 		native: []*builtin{{
